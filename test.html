@@ -389,10 +389,10 @@
             display: inline-block;
             margin-left: 6px;
             padding: 1px 5px;
-            /* ───background: #e02020;─── */
-            color: #000;
+            background: #e02020;
+            color: white;
             font-size: 10px;
-            /* ───font-weight: bold;─── */
+            font-weight: bold;
             border-radius: 3px;
             letter-spacing: 0.5px;
             vertical-align: middle;
@@ -565,13 +565,13 @@
     // ─────────────────────────────────────────────────────────────────
     const recordContents = [
         {
-            title: "Chapter 1",
+           title: "Chapter 1",
             fadeLines: [
                 { text: "據說在很久很久以前，人類和天使以及惡魔\n曾和平共存於同一片大地之上", stay: 6000 },
                 { text: "可後來卻發生戰爭，三個種族便分別在各自的世界生活", stay: 5000 },
                 { text: "由於彼此互不往來，所遺留下來可供佐證的相關文獻過少\n這段傳說普遍被認為是古人所創作的幻想……", stay: 8000 }
             ],
-            content: `「而我認為這或許是古代所流行的宗教信仰，甚至是某種被集體抹除的歷史紀錄，畢竟信仰的誕生必然有其物理上的原型，如此一來──艾格？你有在聽嗎？」
+            content: `「──而我認為這或許是古代所流行的宗教信仰，甚至是某種被集體抹除的歷史紀錄，畢竟信仰的誕生必然有其物理上的原型，如此一來……艾格？你有在聽嗎？」
 
 「有啊」艾格雷瓦托著下巴，視線漫不經心地掃向攤滿桌上的羊皮紙，「爛大街ACG作品一樣的設定」
 
@@ -950,6 +950,7 @@
                 document.querySelectorAll('.record-button.active')
                     .forEach(btn => btn.classList.remove('active'));
                 e.target.classList.add('active');
+                closeGlobalPanel(); // 收回右側面板
                 showRecord(parseInt(e.target.dataset.record));
             }
         });
@@ -992,10 +993,12 @@
                 backgroundOverlay.classList.add('fade-out');
                 buttonContainer.style.display = 'none';
                 finalRecordButton.style.display = 'none';
-                globalSidePanel.classList.remove('active');   // 新增：收起右側面板
-                globalSideButtons.style.display = 'none';     // 新增：隱藏左側按鈕群組
+                globalSidePanel.classList.remove('active');
+                globalSideButtons.style.display = 'none';
                 setTimeout(() => {
                     backgroundOverlay.classList.remove('active', 'fade-out');
+                    // ── 跳轉至下一頁 ──
+                    window.location.href = 'https://www.plurk.com/midorimimi';
                 }, 500);
             }, 600);
         });
