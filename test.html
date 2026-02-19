@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>記錄檢視器</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'M PLUS 1p', sans-serif;
+            line-height: 5;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+
+        .button-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .record-button {
+            width: 100%;
+            padding: 10px 15px;
+            background: none;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        .record-button:hover {
+            background-color: #f5f5f5;
+        }
+
+        .final-record-button {
+            width: 100%;
+            padding: 10px 15px;
+            background: none;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            text-align: center;
+            cursor: pointer;
+            display: none;
+            margin-top: 20px;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        .final-record-button:hover {
+            background-color: #f5f5f5;
+        }
+
+        .close-record-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1101;
+        }
+
+        .background-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: black;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+            z-index: 999;
+        }
+
+        .background-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .background-overlay.fade-out {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        /* 彈出區塊樣式 */
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            width: 830px;
+            height: 300px;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+            background-color: #000000;
+            background-image: radial-gradient(rgba(66, 195, 200, 0.2), #1d1e22 120%);
+            color: #ffffff;
+            font: 1.3rem Inconsolata, monospace;
+            text-shadow: 0 0 5px #FFFFFF;
+            box-shadow: 0 0 20px rgba(66, 195, 200, 0.5),
+                        0 0 40px rgba(66, 195, 200, 0.3),
+                        0 0 60px rgba(66, 195, 200, 0.2);
+            overflow: hidden;
+        }
+
+        .overlay::after {
+            content: "";
+            position: absolute;
+            opacity: 0.3;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(0deg, black, black 2px, transparent, transparent 4px);
+            pointer-events: none;
+        }
+
+        .overlay::before {
+            content: "";
+            position: absolute;
+            z-index: 1000;
+            opacity: 0.4;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at right 34% bottom 5%, transparent 60%, #000000);
+            pointer-events: none;
+        }
+
+        .wrapper {
+            height: 100%;
+            padding: 2rem;
+            overflow-y: auto;
+            max-height: 100%;
+        }
+
+        .wrapper::-webkit-scrollbar {
+            display: none;
+        }
+
+        pre {
+            margin: 0;
+            white-space: pre-wrap;
+            line-height: 1.5;
+            animation: text-blink 0.01s steps(2) infinite;
+        }
+
+        pre:last-of-type {
+            padding-bottom: 2rem;
+        }
+
+        @keyframes text-blink {
+            from, to { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        @keyframes blink {
+            from, to { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        .close-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            display: none;
+            z-index: 1001;
+        }
+
+        .censor-text {
+            cursor: pointer;
+            color: #A82426;
+            text-shadow: 0 0 5px #A82426;
+            background-color: transparent;
+            transition: color 0.3s ease, text-shadow 0.3s ease;
+        }
+        .censor-text.revealed {
+            color: #ffffff;
+            text-shadow: 0 0 5px #ffffff;
+        }
+        .censor-text:hover {
+            opacity: 0.8;
+        }
+
+        [id^="output"]:after {
+            content: "▮";
+            opacity: 0;
+            animation: none;
+        }
+
+        [id^="output"].active-cursor:after {
+            opacity: 1;
+            animation: blink 1s steps(1) infinite;
+        }
+
+        [id^="output"].gw-writing:after {
+            animation: none;
+            opacity: 1;
+        }
+
+        @keyframes crt-off {
+            0% {
+                transform: translate(-50%, -50%) scale(1, 1);
+                filter: brightness(1);
+                opacity: 1;
+            }
+            60% {
+                transform: translate(-50%, -50%) scale(1, 0.001);
+                filter: brightness(0.8);
+                opacity: 0.8;
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(0, 0.001);
+                filter: brightness(0);
+                opacity: 0;
+            }
+        }
+
+        @keyframes crt-lines {
+            0% { background-position: 0 0; }
+            100% { background-position: 0 25px; }
+        }
+
+        .overlay.closing {
+            animation: crt-off 0.6s cubic-bezier(.4,0,.2,1) forwards,
+                       crt-lines 0.2s linear infinite;
+            background-image: 
+                radial-gradient(rgba(66, 195, 200, 0.2), #1d1e22 120%),
+                repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.5) 0, rgba(0, 0, 0, 0.5) 1px, transparent 1px, transparent 2px);
+            background-size: 100% 100%, 100% 25px;
+        }
+
+        .record-button.active {
+            background-color: #f5f5f5;
+        }
+
+        /* ─── 章節閱覽區 ─── */
+        .record-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .record-content {
+            max-width: 800px;
+            margin: 60px auto 40px;
+            padding: 20px 40px;
+            line-height: 1.8;
+            white-space: pre-line;
+            min-height: calc(100vh - 100px);
+        }
+
+        .record-overlay::-webkit-scrollbar { width: 8px; }
+        .record-overlay::-webkit-scrollbar-track { background: #f1f1f1; }
+        .record-overlay::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
+        .record-overlay::-webkit-scrollbar-thumb:hover { background: #555; }
+
+        [id^="output"] { color: white; }
+
+        /* ─── 主頁面左側全域按鈕 ─── */
+        .global-side-buttons {
+            position: fixed;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 500; /* 主頁面層，低於 record-overlay */
+        }
+
+        .global-side-btn {
+            padding: 12px 20px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            /* 初始隱藏，用 JS 控制顯示 */
+            opacity: 0;
+            pointer-events: none;
+            transform: translateX(-10px);
+        }
+
+        .global-side-btn.visible {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateX(0);
+            transition: opacity 0.4s ease, transform 0.4s ease, background-color 0.2s ease, border-color 0.2s ease;
+        }
+
+        .global-side-btn:hover {
+            background-color: #f5f5f5;
+            border-color: #999;
+        }
+
+        .global-side-btn.active {
+            background-color: #333;
+            color: white;
+            border-color: #333;
+        }
+
+        /* ─── 主頁面右側面板 ─── */
+        .global-side-panel {
+            position: fixed;
+            right: 0;
+            top: 0;
+            width: 400px;
+            height: 100%;
+            background: #f9f9f9;
+            border-left: 1px solid #ddd;
+            z-index: 500;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            overflow-y: auto;
+            box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+        }
+
+        .global-side-panel.active {
+            transform: translateX(0);
+        }
+
+        .global-side-panel-content {
+            padding: 60px 30px 40px;
+            line-height: 1.8;
+        }
+
+        .global-side-panel-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .global-side-panel-text {
+            white-space: normal;
+            font-size: 14px;
+            line-height: 1.8;
+            color: #444;
+        }
+
+        .global-side-panel-text img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+
+        .global-panel-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: none;
+            border: none;
+            font-size: 22px;
+            cursor: pointer;
+            color: #666;
+            line-height: 1;
+        }
+        .global-panel-close:hover { color: #000; }
+
+        /* ─── NEW 標籤 ─── */
+        .global-side-btn .new-badge {
+            display: inline-block;
+            margin-left: 6px;
+            padding: 1px 5px;
+            /* ───background: #e02020;─── */
+            color: #000;
+            font-size: 10px;
+            /* ───font-weight: bold;─── */
+            border-radius: 3px;
+            letter-spacing: 0.5px;
+            vertical-align: middle;
+            line-height: 1.5;
+            animation: badge-pop 0.3s cubic-bezier(.4,1.6,.6,1) both;
+        }
+
+        @keyframes badge-pop {
+            from { transform: scale(0.5); opacity: 0; }
+            to   { transform: scale(1);   opacity: 1; }
+        }
+
+        .global-side-panel::-webkit-scrollbar { width: 8px; }
+        .global-side-panel::-webkit-scrollbar-track { background: #f1f1f1; }
+        .global-side-panel::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
+        .global-side-panel::-webkit-scrollbar-thumb:hover { background: #555; }
+
+        /* ─── 淡入淡出文字效果 ─── */
+        .fade-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 1100;
+            pointer-events: none;
+        }
+
+        .fade-line {
+            font-size: clamp(0.8em, 2vw, 1.5em);
+            font-weight: bold;
+            text-align: center;
+            line-height: 1.6;
+            opacity: 0;
+            transition: opacity 1s ease;
+            padding: 0 24px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .record-content.hidden-content {
+            visibility: hidden;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 主頁面章節按鈕 -->
+    <div class="container">
+        <div class="button-container">
+            全部點開一遍
+        </div>
+        <button class="final-record-button">某個科學家留下的紀錄</button>
+    </div>
+
+    <!-- 主頁面左側全域按鈕（看完章節後出現） -->
+    <div class="global-side-buttons" id="globalSideButtons"></div>
+
+    <!-- 主頁面右側說明面板 -->
+    <div class="global-side-panel" id="globalSidePanel">
+        <button class="global-panel-close" id="globalPanelClose">×</button>
+        <div class="global-side-panel-content">
+            <div class="global-side-panel-title" id="globalPanelTitle"></div>
+            <div class="global-side-panel-text"  id="globalPanelText"></div>
+        </div>
+    </div>
+
+    <!-- 章節閱覽 overlay -->
+    <div class="record-overlay">
+        <button class="close-record-button">×</button>
+        <div class="record-content"></div>
+    </div>
+
+    <div class="background-overlay"></div>
+
+    <!-- 科學家紀錄打字機 -->
+    <div class="overlay">
+        <button class="close-button">×</button>
+        <div class="wrapper">
+            <pre><span id="output1"></span><span class="cursor"></span></pre>
+            <pre><span id="output2"></span><span class="cursor"></span></pre>
+            <pre><span id="output3"></span><span class="cursor"></span></pre>
+            <pre><span id="output4"></span><span class="cursor"></span></pre>
+            <pre><span id="output5"></span><span class="cursor"></span></pre>
+            <pre><span id="output6"></span><span class="cursor"></span></pre>
+            <pre><span id="output7"></span><span class="cursor"></span></pre>
+        </div>
+    </div>
+
+<script type="module">
+    import GlitchedWriter, { wait, presets } from "https://cdn.skypack.dev/glitched-writer@2.0.29";
+
+    // ─────────────────────────────────────────────────────────────────
+    // 全域按鈕定義
+    // 每個按鈕可有多個「版本」，版本會被後續章節覆蓋
+    // versions 的 key 名稱可自訂，只要 chapterEffects 裡對應即可
+    // ─────────────────────────────────────────────────────────────────
+    const globalButtonDefs = {
+        btn1: {
+            label: "蘿絲",
+            versions: {
+                default: {
+                    title: "相關註解",
+                    content: `這是一段註解內容<br>可以提供額外的說明<br>或背景資訊`
+                },
+                afterCh3: {
+                    title: "相關註解（更新）",
+                    content: `閱讀過 Chapter 3 後更新的蘿絲相關資料<br><br>提供了更多背景`
+                }
+            }
+        },
+        btn2: {
+            label: "艾格雷瓦",
+            versions: {
+                default: {
+                    title: "補充資料",
+                    content: `這裡是補充資料<br><br>
+                    <img src="https://images.plurk.com/1nBOwG5hH0BYq1wQhD2jEh.png"><br>
+                    提供更多細節，幫助理解主文`
+                },
+                afterCh3: {
+                    title: "補充資料（更新）",
+                    content: `閱讀過 Chapter 3 後更新的艾格雷瓦資料<br><br>有了新的發現`
+                }
+            }
+        },
+        btn3: {
+            label: "備註",
+            versions: {
+                default: {
+                    title: "重要備註",
+                    content: "Chapter 2 的特別說明"
+                }
+            }
+        },
+        btn4: {
+            label: "詩米雷",
+            versions: {
+                default: {
+                    title: "重要備註",
+                    content: "Chapter 3 的特別說明"
+                }
+            }
+        }
+        // ── 需要新增按鈕時，在此繼續新增 ──
+    };
+
+    // ─────────────────────────────────────────────────────────────────
+    // 章節完成效果設定
+    // show        : 該章節看完後，要「顯示」哪些按鈕（首次出現）
+    // updateVersion: 要把哪些按鈕切換到哪個版本
+    //               （無論按鈕當下是否已顯示都會套用）
+    // ─────────────────────────────────────────────────────────────────
+    const chapterEffects = {
+        0: { show: ["btn1", "btn2"], updateVersion: {} },          // Chapter 1
+        1: { show: ["btn3"],         updateVersion: {} },          // Chapter 2
+        2: { show: [],               updateVersion: { btn1: "afterCh3", btn2: "afterCh3" } }, // Chapter 3
+        3: { show: ["btn4"],         updateVersion: {} }           // Chapter 4
+        // ── 需要新增章節效果時，在此繼續新增 ──
+    };
+
+    // ─────────────────────────────────────────────────────────────────
+    // 章節內容定義（移除各章節的 sideButtons，改由主頁面統一管理）
+    // ─────────────────────────────────────────────────────────────────
+    const recordContents = [
+        {
+            title: "Chapter 1",
+            fadeLines: [
+                { text: "據說在很久很久以前，人類和天使以及惡魔\n曾和平共存於同一片大地之上", stay: 6000 },
+                { text: "可後來卻發生戰爭，三個種族便分別在各自的世界生活", stay: 5000 },
+                { text: "由於彼此互不往來，所遺留下來可供佐證的相關文獻過少\n這段傳說普遍被認為是古人所創作的幻想……", stay: 8000 }
+            ],
+            content: `「而我認為這或許是古代所流行的宗教信仰，甚至是某種被集體抹除的歷史紀錄，畢竟信仰的誕生必然有其物理上的原型，如此一來──艾格？你有在聽嗎？」
+
+「有啊」艾格雷瓦托著下巴，視線漫不經心地掃向攤滿桌上的羊皮紙，「爛大街ACG作品一樣的設定」
+
+蘿絲放下手中的資料，無奈地嘆了口氣：「真是的，到底是誰的作業啊……我可是犧牲了自己的午休時間，還把專業知識傾囊相授給你耶！」
+
+「我只是說學校要做自由專題研究，問妳這邊有沒有什麼好寫的主題，」艾格雷瓦語氣平靜地反駁，「然後妳就雙眼放光，像傳教士一樣自顧自地講起來了」
+
+蘿絲再度嘆氣，這次帶著幾分說不清道不明的沉重
+
+「爸媽前陣子又在勸我……說我應該帶著你和他們一起到國外經營服裝店」她的聲音輕了下來，「艾格，你也覺得我該換個工作、別再抱有不切實際的幻想了嗎？」
+
+「問我幹嘛？」艾格雷瓦將視線從那些泛黃的文字移開，直直地看著蘿絲的雙眼，「這是妳自己的人生，妳想做什麼自己決定，別人既不會、也沒有義務為妳的人生負責——管他們怎麼說？」
+
+這話說得冷硬，卻是他最真實的生存哲學
+
+蘿絲一愣，隨即笑著伸手揉了揉艾格雷瓦的頭髮，「你這話說的，活像個人生經歷豐富的大人一樣」
+
+艾格雷瓦翻了個白眼，「妳這習慣該改改了，別老把我當小孩」
+
+「在我眼裡你本來就是小孩，不管是以前還是現在」
+
+蘿絲收回手，眼神卻不自覺地飄向艾格雷瓦那截露在袖口外的、曾因意外留下淡淡疤痕的手腕
+
+即便傷口早已癒合，卻依然像一道無法抹去的陰影，提醒著她眼前這個少年曾受過多大的苦難
+
+
+那時他們還只是鄰居
+
+自從艾格雷瓦的母親留下巨額債務、在那場連綿的小雨中人間蒸發後，那個原本就不健全的家便徹底崩塌
+
+隔壁牆後時常傳來酒瓶破碎的清脆聲、男人含糊不清的咆哮，以及重物撞擊牆壁時那種令人心驚膽顫的沉悶聲響
+
+若非當時蘿絲的父母強行介入，並在幾年後正式收養了他，艾格雷瓦大概早就成了這座城市某個陰暗角落裡的無名碎片
+
+儘管後來蘿絲的父母決定去國外經營生意，將那間舊公寓留給了剛出社會的蘿絲和正在升學的艾格雷瓦，他們仍經常關心著蘿絲與艾格雷瓦的生活情況
+
+
+「如果我真的聽爸媽的話去國外，你也會跟著去嗎？」蘿絲突然問道，語氣裡藏著一絲連她自己都沒察覺的試探
+
+「我去那邊幹嘛？幫忙燙衣服還是當模特兒？」艾格雷瓦自嘲地扯了扯嘴角，「再說，妳真的捨得這些妳所謂的『真相』嗎？」`
+        },
+        {
+            title: "Chapter 2",
+            content: `咪`
+        },
+        {
+            title: "Chapter 3",
+            content: `咪`
+        },
+        {
+            title: "Chapter 4",
+            content: `咪`
+        },
+        {
+            title: "Chapter 5",
+            content: `咪`
+        },
+        {
+            title: "Chapter 6",
+            content: `咪`
+        },
+        {
+            title: "Chapter 7",
+            content: `咪`
+        },
+        {
+            title: "Chapter 8",
+            content: `咪`
+        },
+        {
+            title: "Chapter 9",
+            content: `咪`
+        },
+        {
+            title: "Chapter 10",
+            content: `嗚啦`
+        }
+    ];
+
+    // ─────────────────────────────────────────────────────────────────
+    // 狀態
+    // ─────────────────────────────────────────────────────────────────
+    const closedRecords       = new Set();
+    const playedFadeRecords   = new Set();
+    const visibleButtons      = new Set();   // 目前已顯示的按鈕 id
+    const buttonVersionState  = {};          // btn id → 目前版本 key
+    let   activePanelBtnId    = null;        // 目前開啟面板的按鈕 id
+
+    // 初始化每顆按鈕的版本為 "default"
+    Object.keys(globalButtonDefs).forEach(id => {
+        buttonVersionState[id] = "default";
+    });
+
+    const newBadgeState = new Set(); // 目前帶有 NEW 標籤的按鈕 id
+
+    // ─────────────────────────────────────────────────────────────────
+    // DOM 參考
+    // ─────────────────────────────────────────────────────────────────
+    const buttonContainer    = document.querySelector('.button-container');
+    const recordOverlay      = document.querySelector('.record-overlay');
+    const closeRecordButton  = document.querySelector('.close-record-button');
+    const recordContent      = document.querySelector('.record-content');
+    const finalRecordButton  = document.querySelector('.final-record-button');
+    const overlay            = document.querySelector('.overlay');
+    const closeButton        = document.querySelector('.close-button');
+    const backgroundOverlay  = document.querySelector('.background-overlay');
+    const globalSideButtons  = document.getElementById('globalSideButtons');
+    const globalSidePanel    = document.getElementById('globalSidePanel');
+    const globalPanelTitle   = document.getElementById('globalPanelTitle');
+    const globalPanelText    = document.getElementById('globalPanelText');
+    const globalPanelClose   = document.getElementById('globalPanelClose');
+
+    // ─────────────────────────────────────────────────────────────────
+    // 全域按鈕渲染
+    // ─────────────────────────────────────────────────────────────────
+    function renderGlobalButtons() {
+        // 重建所有按鈕 DOM（只保留 visible 的）
+        globalSideButtons.innerHTML = '';
+
+        Object.keys(globalButtonDefs).forEach(id => {
+            if (!visibleButtons.has(id)) return;
+
+            const def        = globalButtonDefs[id];
+            const version    = buttonVersionState[id];
+            const versionData= def.versions[version] || def.versions["default"];
+
+            const btn = document.createElement('button');
+            btn.className = 'global-side-btn visible';
+            btn.dataset.btnId = id;
+
+            // 標籤文字
+            const labelSpan = document.createElement('span');
+            labelSpan.textContent = def.label;
+            btn.appendChild(labelSpan);
+
+            // NEW 標籤
+            if (newBadgeState.has(id)) {
+                const badge = document.createElement('span');
+                badge.className = 'new-badge';
+                badge.textContent = 'NEW';
+                btn.appendChild(badge);
+            }
+
+            if (activePanelBtnId === id) btn.classList.add('active');
+
+            btn.addEventListener('click', () => {
+                if (activePanelBtnId === id && globalSidePanel.classList.contains('active')) {
+                    // 再次點擊同一顆 → 關閉面板
+                    closeGlobalPanel();
+                } else {
+                    // 點擊後清除 NEW 標籤
+                    if (newBadgeState.has(id)) {
+                        newBadgeState.delete(id);
+                        renderGlobalButtons(); // 立即移除徽章
+                    }
+                    openGlobalPanel(id, versionData);
+                }
+            });
+
+            globalSideButtons.appendChild(btn);
+        });
+    }
+
+    function openGlobalPanel(btnId, versionData) {
+        activePanelBtnId = btnId;
+        globalPanelTitle.textContent = versionData.title;
+        globalPanelText.innerHTML    = versionData.content;
+        globalSidePanel.classList.add('active');
+        // 更新 active 樣式
+        globalSideButtons.querySelectorAll('.global-side-btn').forEach(b => {
+            b.classList.toggle('active', b.dataset.btnId === btnId);
+        });
+    }
+
+    function closeGlobalPanel() {
+        activePanelBtnId = null;
+        globalSidePanel.classList.remove('active');
+        globalSideButtons.querySelectorAll('.global-side-btn').forEach(b => b.classList.remove('active'));
+    }
+
+    globalPanelClose.addEventListener('click', closeGlobalPanel);
+
+    // ─────────────────────────────────────────────────────────────────
+    // 章節完成時：套用效果
+    // ─────────────────────────────────────────────────────────────────
+    function applyChapterEffect(chapterIndex) {
+        const effect = chapterEffects[chapterIndex];
+        if (!effect) return;
+
+        // 1. 更新版本（無論按鈕是否已顯示）
+        Object.entries(effect.updateVersion || {}).forEach(([btnId, newVersion]) => {
+            buttonVersionState[btnId] = newVersion;
+            // 已顯示的按鈕內容更新時標記 NEW
+            if (visibleButtons.has(btnId)) {
+                newBadgeState.add(btnId);
+            }
+        });
+
+        // 2. 標記需要顯示的按鈕，首次出現也標記 NEW
+        (effect.show || []).forEach(btnId => {
+            visibleButtons.add(btnId);
+            newBadgeState.add(btnId);
+        });
+
+        // 3. 如果面板正在顯示某顆被更新的按鈕，即時刷新面板內容
+        if (activePanelBtnId && effect.updateVersion && effect.updateVersion[activePanelBtnId]) {
+            const def      = globalButtonDefs[activePanelBtnId];
+            const version  = buttonVersionState[activePanelBtnId];
+            const vData    = def.versions[version] || def.versions["default"];
+            globalPanelTitle.textContent = vData.title;
+            globalPanelText.innerHTML    = vData.content;
+        }
+
+        // 4. 重新渲染按鈕列表
+        renderGlobalButtons();
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // 淡入淡出動畫
+    // ─────────────────────────────────────────────────────────────────
+    function playFadeLines(lines, stayMs = 2000) {
+        return new Promise(async (resolve) => {
+            const screen = document.createElement('div');
+            screen.className = 'fade-screen';
+
+            const el = document.createElement('div');
+            el.className = 'fade-line';
+            screen.appendChild(el);
+            document.body.appendChild(screen);
+
+            for (const line of lines) {
+                const text  = typeof line === 'string' ? line : line.text;
+                const delay = typeof line === 'string' ? stayMs : line.stay;
+
+                el.innerHTML = text.replace(/\n/g, '<br>');
+
+                await nextFrame();
+                el.style.opacity = '1';
+                await waitMs(1000);
+                await waitMs(delay);
+                el.style.opacity = '0';
+                await waitMs(1000);
+            }
+
+            screen.remove();
+            resolve();
+        });
+    }
+
+    function nextFrame() {
+        return new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    }
+    function waitMs(ms) {
+        return new Promise(r => setTimeout(r, ms));
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // 顯示章節
+    // ─────────────────────────────────────────────────────────────────
+    async function showRecord(index) {
+        const record = recordContents[index];
+
+        recordContent.innerHTML = record.content;
+        recordOverlay.style.display = 'block';
+        recordOverlay.scrollTop = 0;
+
+        setTimeout(() => recordOverlay.classList.add('active'), 10);
+
+        if (record.fadeLines && !playedFadeRecords.has(index)) {
+            playedFadeRecords.add(index);
+            recordContent.classList.add('hidden-content');
+            closeRecordButton.style.pointerEvents = 'none';
+            await playFadeLines(record.fadeLines, 2000);
+            closeRecordButton.style.pointerEvents = '';
+            recordContent.classList.remove('hidden-content');
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // 打字機效果
+    // ─────────────────────────────────────────────────────────────────
+    function initializeTypingEffect() {
+        return Array.from({length: 7}, (_, i) => {
+            return new GlitchedWriter(`#output${i + 1}`, {
+                ...presets.terminal,
+                mode: "erase_smart",
+                html: true
+            });
+        });
+    }
+
+    function updateCursors(currentIndex) {
+        document.querySelectorAll('[id^="output"]').forEach((el) => {
+            el.classList.remove('active-cursor', 'gw-writing');
+        });
+        const currentOutput = document.querySelector(`#output${currentIndex + 1}`);
+        if (currentOutput) {
+            currentOutput.classList.add('active-cursor', 'gw-writing');
+        }
+    }
+
+    function setupCensor(id) {
+        const censor = document.querySelector(`#${id}`);
+        if (censor) {
+            const newCensor = censor.cloneNode(true);
+            censor.parentNode.replaceChild(newCensor, censor);
+            let isRevealed = false;
+            newCensor.addEventListener('mouseenter', function() {
+                if (!isRevealed) {
+                    this.textContent = this.getAttribute('data-text');
+                    this.classList.add('revealed');
+                    isRevealed = true;
+                }
+            });
+        }
+    }
+
+    async function writeCensoredText(writer, text, censorId) {
+        await writer.write(text);
+        await wait(50);
+        setupCensor(censorId);
+    }
+
+    async function executeTypingAnimation(writers) {
+        const messages  = [
+            `說實話，我並不是很喜歡留下實體記錄`,
+            `但不得不承認，在將想法與情報轉化成文字的過程確實有助於整理和再次釐清思路`,
+            ``,
+            `我看見了那名成為魔王的惡魔的記憶`,
+            `然而，當中存在著明顯的<strong id="censor1" class="censor-text" data-text="矛盾">███</strong>`,
+            `不知是出於誰的意志，當中摻雜著<strong id="censor2" class="censor-text" data-text="捏造">███</strong>的片段`,
+            `想來即使是紀錄在此處的內容，一旦觸及到關鍵要素也隨時會<strong id="censor3" class="censor-text" data-text="被竄改">███</strong>吧`
+        ];
+        const delays    = [1200, 2000, 2000, 1500, 1200, 1200, 2000];
+        const censorIds = [null, null, null, null, 'censor1', 'censor2', 'censor3'];
+
+        for (let i = 0; i < messages.length; i++) {
+            updateCursors(i);
+            if (censorIds[i]) {
+                await writeCensoredText(writers[i], messages[i], censorIds[i]);
+            } else {
+                await writers[i].write(messages[i]);
+            }
+            if (i === messages.length - 1) {
+                document.querySelector(`#output${i + 1}`).classList.add('active-cursor');
+                closeButton.style.display = 'block';
+            }
+            await wait(delays[i]);
+        }
+    }
+
+    function checkAllRecordsClosed() {
+        if (closedRecords.size === recordContents.length) {
+            finalRecordButton.style.display = 'block';
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // 初始化
+    // ─────────────────────────────────────────────────────────────────
+    function initializePage() {
+        const writers = initializeTypingEffect();
+        buttonContainer.style.display = 'block';
+
+        // 建立章節按鈕
+        recordContents.forEach((record, index) => {
+            const button = document.createElement('button');
+            button.className = 'record-button';
+            button.textContent = record.title;
+            button.dataset.record = index;
+            buttonContainer.appendChild(button);
+        });
+
+        buttonContainer.addEventListener('click', (e) => {
+            if (e.target.classList.contains('record-button')) {
+                document.querySelectorAll('.record-button.active')
+                    .forEach(btn => btn.classList.remove('active'));
+                e.target.classList.add('active');
+                showRecord(parseInt(e.target.dataset.record));
+            }
+        });
+
+        // 關閉章節 → 套用效果
+        closeRecordButton.addEventListener('click', () => {
+            recordOverlay.classList.remove('active');
+            setTimeout(() => {
+                recordOverlay.style.display = 'none';
+                recordOverlay.scrollTop = 0;
+
+                const currentButton = document.querySelector('.record-button.active');
+                if (currentButton) {
+                    const recordIndex = parseInt(currentButton.dataset.record);
+
+                    if (!closedRecords.has(recordIndex)) {
+                        closedRecords.add(recordIndex);
+                        applyChapterEffect(recordIndex); // ← 套用全域按鈕效果
+                        checkAllRecordsClosed();
+                    }
+
+                    currentButton.classList.remove('active');
+                }
+            }, 300);
+        });
+
+        finalRecordButton.addEventListener('click', async () => {
+            backgroundOverlay.classList.add('active');
+            await wait(500);
+            overlay.style.display = 'block';
+            executeTypingAnimation(writers);
+        });
+
+        closeButton.addEventListener('click', () => {
+            overlay.classList.add('closing');
+            setTimeout(() => {
+                overlay.style.display = 'none';
+                overlay.classList.remove('closing');
+                closeButton.style.display = 'none';
+                backgroundOverlay.classList.add('fade-out');
+                buttonContainer.style.display = 'none';
+                finalRecordButton.style.display = 'none';
+                globalSidePanel.classList.remove('active');   // 新增：收起右側面板
+                globalSideButtons.style.display = 'none';     // 新增：隱藏左側按鈕群組
+                setTimeout(() => {
+                    backgroundOverlay.classList.remove('active', 'fade-out');
+                }, 500);
+            }, 600);
+        });
+    }
+
+    initializePage();
+</script>
+</body>
+</html>
