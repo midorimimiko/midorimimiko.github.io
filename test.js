@@ -631,9 +631,10 @@
     // ─────────────────────────────────────────────────────────────────
     // 初始化
     // ─────────────────────────────────────────────────────────────────
-    function initializePage() {
+function initializePage() {
         const writers = initializeTypingEffect();
         buttonContainer.style.display = 'block';
+        finalRecordButton.textContent = "某個科學家留下的紀錄";
 
         // 建立章節按鈕
         recordContents.forEach((record, index) => {
@@ -710,5 +711,6 @@
             }, 600);
         });
     }
+
 
     initializePage();
