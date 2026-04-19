@@ -435,7 +435,11 @@ import GlitchedWriter, { wait, presets } from "https://cdn.skypack.dev/glitched-
 
 反之，當一個人的認知完全固定在正常現實時，任何超自然的真相都會被大腦自動過濾成青少年叛逆期的隱喻
 
-如同大家所看見的世界從來就不是它原本的模樣，只是觀測者由自己的視角所理解的面貌
+<span class="glitch-el"
+        data-a="如同大家所看見的世界從來就不是它原本的模樣，只是觀測者由自己的視角所理解的面貌"
+        data-b="這個世界從來就不是你所看見的模樣，而是觀測者透過自己的解讀所編織出的模樣"
+        data-display="3000"
+        data-glitch="1500"></span>
 
 「好啦好啦，不管是哪樣，只要你平安回來就好，今晚我們去吃頓好的」
 
@@ -650,9 +654,11 @@ import GlitchedWriter, { wait, presets } from "https://cdn.skypack.dev/glitched-
     // 顯示章節
     // ─────────────────────────────────────────────────────────────────
     async function showRecord(index) {
+        _stopAllGlitch();               // ← 加這行：停止上一章節的亂碼
         const record = recordContents[index];
 
         recordContent.innerHTML = record.content;
+        _initGlitchEls();               // ← 加這行：啟動新章節的亂碼元素
         recordOverlay.style.display = 'block';
         recordOverlay.scrollTop = 0;
 
