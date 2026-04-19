@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>記錄檢視器</title>
+<link rel="stylesheet" type="text/css" href="test.css">
+</head>
+<body>
+
+    <!-- 主頁面章節按鈕 -->
+    <div class="container">
+        <div class="button-container">
+            最後更新 14:42
+        </div>
+        <button class="final-record-button"></button>
+    </div>
+
+    <!-- 主頁面左側全域按鈕（看完章節後出現） -->
+    <div class="global-side-buttons" id="globalSideButtons"></div>
+
+    <!-- 主頁面右側說明面板 -->
+    <div class="global-side-panel" id="globalSidePanel">
+        <button class="global-panel-close" id="globalPanelClose">×</button>
+        <div class="global-side-panel-content">
+            <div class="global-side-panel-title" id="globalPanelTitle"></div>
+            <div class="global-side-panel-text"  id="globalPanelText"></div>
+        </div>
+    </div>
+
+    <!-- 章節閱覽 overlay -->
+    <div class="record-overlay">
+        <button class="close-record-button">×</button>
+        <div class="record-content"></div>
+    </div>
+
+    <div class="background-overlay"></div>
+
+    <!-- 科學家紀錄打字機 -->
+    <div class="overlay">
+        <button class="close-button">×</button>
+        <div class="wrapper">
+            <pre><span id="output1"></span><span class="cursor"></span></pre>
+            <pre><span id="output2"></span><span class="cursor"></span></pre>
+            <pre><span id="output3"></span><span class="cursor"></span></pre>
+            <pre><span id="output4"></span><span class="cursor"></span></pre>
+            <pre><span id="output5"></span><span class="cursor"></span></pre>
+            <pre><span id="output6"></span><span class="cursor"></span></pre>
+            <pre><span id="output7"></span><span class="cursor"></span></pre>
+        </div>
+    </div>
+
+<script src="code.js" type="module"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
